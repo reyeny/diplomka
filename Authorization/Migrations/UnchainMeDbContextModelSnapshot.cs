@@ -22,6 +22,30 @@ namespace Authorization.Migrations
 
             NpgsqlModelBuilderExtensions.UseIdentityByDefaultColumns(modelBuilder);
 
+            modelBuilder.Entity("Authorization.Models.LoginRequest", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("Code")
+                        .HasColumnType("text");
+
+                    b.Property<DateTime>("ExpiresAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<bool>("IsApproved")
+                        .HasColumnType("boolean");
+
+                    b.Property<string>("UserId")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.HasKey("Id");
+
+                    b.ToTable("LoginRequests");
+                });
+
             modelBuilder.Entity("Authorization.Models.User", b =>
                 {
                     b.Property<string>("Id")
@@ -39,6 +63,9 @@ namespace Authorization.Migrations
                         .HasColumnType("character varying(256)");
 
                     b.Property<bool>("EmailConfirmed")
+                        .HasColumnType("boolean");
+
+                    b.Property<bool>("HasUsed2FA")
                         .HasColumnType("boolean");
 
                     b.Property<bool>("LockoutEnabled")
@@ -71,6 +98,9 @@ namespace Authorization.Migrations
                         .HasColumnType("text");
 
                     b.Property<string>("Surname")
+                        .HasColumnType("text");
+
+                    b.Property<string>("TelegramChatId")
                         .HasColumnType("text");
 
                     b.Property<bool>("TwoFactorEnabled")

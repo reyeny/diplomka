@@ -1,3 +1,4 @@
+using System.Security.Claims;
 using Authorization.Dto;
 
 namespace Authorization.Services.AuthenticationServices;
@@ -5,5 +6,5 @@ namespace Authorization.Services.AuthenticationServices;
 public interface IAuthenticationService
 {
     Task<AuthResponseDto> Register(RegisterRequestDto registerRequestDto);
-    Task<AuthResponseDto> Login(LoginRequestDto loginRequestDto);
+    Task<AuthResponseDto> LoginImmediate(LoginRequestDto loginRequestDto);
 }

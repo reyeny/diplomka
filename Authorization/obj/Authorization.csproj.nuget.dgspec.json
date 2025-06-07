@@ -1,17 +1,17 @@
 {
   "format": 1,
   "restore": {
-    "/Users/reyeny/Local/identity/backend/Authorization/Authorization.csproj": {}
+    "/Users/reyeny/Local/identity Main/backend/Authorization/Authorization.csproj": {}
   },
   "projects": {
-    "/Users/reyeny/Local/identity/backend/Authorization/Authorization.csproj": {
+    "/Users/reyeny/Local/identity Main/backend/Authorization/Authorization.csproj": {
       "version": "1.0.0",
       "restore": {
-        "projectUniqueName": "/Users/reyeny/Local/identity/backend/Authorization/Authorization.csproj",
+        "projectUniqueName": "/Users/reyeny/Local/identity Main/backend/Authorization/Authorization.csproj",
         "projectName": "Authorization",
-        "projectPath": "/Users/reyeny/Local/identity/backend/Authorization/Authorization.csproj",
+        "projectPath": "/Users/reyeny/Local/identity Main/backend/Authorization/Authorization.csproj",
         "packagesPath": "/Users/reyeny/.nuget/packages/",
-        "outputPath": "/Users/reyeny/Local/identity/backend/Authorization/obj/",
+        "outputPath": "/Users/reyeny/Local/identity Main/backend/Authorization/obj/",
         "projectStyle": "PackageReference",
         "configFilePaths": [
           "/Users/reyeny/.nuget/NuGet/NuGet.Config"
@@ -77,6 +77,10 @@
             "Swashbuckle.AspNetCore": {
               "target": "Package",
               "version": "[6.4.0, )"
+            },
+            "Telegram.Bot": {
+              "target": "Package",
+              "version": "[20.8.0, )"
             }
           },
           "imports": [
