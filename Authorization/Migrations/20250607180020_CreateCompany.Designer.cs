@@ -3,6 +3,7 @@ using System;
 using Authorization.Context;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 
@@ -11,9 +12,11 @@ using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 namespace Authorization.Migrations
 {
     [DbContext(typeof(UnchainMeDbContext))]
-    partial class UnchainMeDbContextModelSnapshot : ModelSnapshot
+    [Migration("20250607180020_CreateCompany")]
+    partial class CreateCompany
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -84,10 +87,6 @@ namespace Authorization.Migrations
 
                     b.Property<int>("Role")
                         .HasColumnType("integer");
-
-                    b.Property<string>("RoleName")
-                        .IsRequired()
-                        .HasColumnType("text");
 
                     b.Property<string>("UserEmail")
                         .IsRequired()

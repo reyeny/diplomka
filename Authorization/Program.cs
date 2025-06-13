@@ -1,12 +1,13 @@
-// Program.cs
 using System.Text;
 using Authorization.Context;
-using Authorization.Models;
 using Authorization.Services.AuthenticationServices;
 using Authorization.Services.Captcha;
 using Authorization.Services.Captcha.Interface;
+using Authorization.Services.CompanyService;
 using Authorization.Services.EmailSenderConfirm;
 using Authorization.Services.EmailSenderConfirm.Interfaces;
+using Authorization.Services.InvitationService;
+using Authorization.Services.TaskService;
 using Authorization.Services.UserServices;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Identity;
@@ -41,38 +42,51 @@ builder.Services.AddDbContext<UnchainMeDbContext>(opt =>
 
 // 3) Identity
 builder.Services.AddIdentity<User, IdentityRole>(options =>
-{
-    options.Password.RequireDigit = true;
-    options.Password.RequireLowercase = true;
-    options.Password.RequireUppercase = true;
-    options.Password.RequireNonAlphanumeric = false;
-    options.Password.RequiredLength = 6;
-})
-.AddEntityFrameworkStores<UnchainMeDbContext>()
-.AddDefaultTokenProviders();
+    {
+        options.Password.RequireDigit = true;
+        options.Password.RequireLowercase = true;
+        options.Password.RequireUppercase = true;
+        options.Password.RequireNonAlphanumeric = false;
+        options.Password.RequiredLength = 6;
+    })
+    .AddEntityFrameworkStores<UnchainMeDbContext>()
+    .AddDefaultTokenProviders();
 
 // 4) JWT Authentication
 builder.Services.AddAuthentication(options =>
-{
-    options.DefaultAuthenticateScheme = JwtBearerDefaults.AuthenticationScheme;
-    options.DefaultChallengeScheme = JwtBearerDefaults.AuthenticationScheme;
-})
-.AddJwtBearer(options =>
-{
-    options.SaveToken = true;
-    options.RequireHttpsMetadata = false;
-    options.TokenValidationParameters = new TokenValidationParameters
     {
-        ValidateIssuer = true,
-        ValidateAudience = true,
-        ValidateLifetime = true,
-        ValidateIssuerSigningKey = true,
-        ValidIssuer = configuration["JWT:ValidIssuer"],
-        ValidAudience = configuration["JWT:ValidAudience"],
-        IssuerSigningKey = new SymmetricSecurityKey(
-            Encoding.UTF8.GetBytes(configuration["JWT:Secret"]!))
-    };
-});
+        options.DefaultAuthenticateScheme = JwtBearerDefaults.AuthenticationScheme;
+        options.DefaultChallengeScheme = JwtBearerDefaults.AuthenticationScheme;
+    })
+    .AddJwtBearer(options =>
+    {
+        options.SaveToken = true;
+        options.RequireHttpsMetadata = false;
+        options.TokenValidationParameters = new TokenValidationParameters
+        {
+            ValidateIssuer = true,
+            ValidateAudience = true,
+            ValidateLifetime = true,
+            ValidateIssuerSigningKey = true,
+            ValidIssuer = configuration["JWT:ValidIssuer"],
+            ValidAudience = configuration["JWT:ValidAudience"],
+            IssuerSigningKey = new SymmetricSecurityKey(
+                Encoding.UTF8.GetBytes(configuration["JWT:Secret"]!)),
+            RoleClaimType = System.Security.Claims.ClaimTypes.Role // важно для правильной работы ролей
+        };
+
+        options.Events = new JwtBearerEvents
+        {
+            OnTokenValidated = context =>
+            {
+                var roles = context.Principal.Claims
+                    .Where(c => c.Type == System.Security.Claims.ClaimTypes.Role)
+                    .Select(c => c.Value);
+                Console.WriteLine("Роли в токене: " + string.Join(", ", roles));
+                return Task.CompletedTask;
+            }
+        };
+    });
 
 // 5) Controllers & Authorization
 builder.Services.AddAuthorization();
@@ -88,7 +102,11 @@ builder.Services.AddScoped<IAuthenticationService, AuthenticationService>();
 builder.Services.AddScoped<IUserService, UserService>();
 builder.Services.AddHttpClient<IRecaptchaService, RecaptchaService>();
 
-// 8) Telegram BotClient
+builder.Services.AddScoped<ICompanyService, CompanyService>();
+builder.Services.AddScoped<IInvitationService, InvitationService>();
+builder.Services.AddScoped<ITaskService, TaskService>();
+
+// 8) Telegram BotClient - Оставляем как есть
 var botToken = configuration["Telegram:BotToken"]!;
 if (string.IsNullOrWhiteSpace(botToken))
     throw new Exception("Токен Telegram бота не задан!");
@@ -101,6 +119,12 @@ builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
 
 var app = builder.Build();
+
+using (var scope = app.Services.CreateScope())
+{
+    var services = scope.ServiceProvider;
+    await EnsureRoles(services);
+}
 
 if (app.Environment.IsDevelopment())
 {
@@ -115,7 +139,7 @@ app.UseAuthentication();
 app.UseAuthorization();
 app.MapControllers();
 
-// 10) Запускаем Long Polling бота
+// 10) Запускаем Long Polling бота - оставлено без изменений
 using var cts = new CancellationTokenSource();
 botClient.StartReceiving(
     HandleUpdateAsync,
@@ -135,7 +159,6 @@ async Task HandleUpdateAsync(ITelegramBotClient bot, Update update, Cancellation
     var dbContext = scope.ServiceProvider.GetRequiredService<UnchainMeDbContext>();
     var userManager = scope.ServiceProvider.GetRequiredService<UserManager<User>>();
 
-    // 1) Если пользователь сообщил боту свой Email (для привязки TelegramChatId)
     if (update.Type == UpdateType.Message && update.Message!.Type == MessageType.Text)
     {
         var chatId = update.Message.Chat.Id;
@@ -159,15 +182,12 @@ async Task HandleUpdateAsync(ITelegramBotClient bot, Update update, Cancellation
                 text: "Пользователь с указанным email не найден."
             );
         }
-
         return;
     }
 
-    // 2) Если пользователь нажал inline-кнопку “Подтвердить вход” или “Отклонить вход”
     if (update.Type == UpdateType.CallbackQuery && update.CallbackQuery!.Data != null)
     {
         var data = update.CallbackQuery.Data!;
-        // Формат data = "approve:<RequestId>" или "reject:<RequestId>"
         if (data.StartsWith("approve:") || data.StartsWith("reject:"))
         {
             var parts = data.Split(':', 2);
@@ -179,32 +199,23 @@ async Task HandleUpdateAsync(ITelegramBotClient bot, Update update, Cancellation
 
                 if (loginRequest == null || DateTime.UtcNow > loginRequest.ExpiresAt)
                 {
-                    await bot.SendTextMessageAsync(
-                        chatId: chatId,
-                        text: "Запрос на вход не найден или уже просрочен."
-                    );
+                    await bot.SendTextMessageAsync(chatId, "Запрос на вход не найден или уже просрочен.");
                     return;
                 }
 
                 if (action == "approve")
                 {
                     loginRequest.IsApproved = true;
-                    await dbContext.SaveChangesAsync();
+                    await dbContext.SaveChangesAsync(ct);
 
-                    await bot.SendTextMessageAsync(
-                        chatId: chatId,
-                        text: "Вход подтверждён! Возвращайтесь на сайт."
-                    );
+                    await bot.SendTextMessageAsync(chatId, "Вход подтверждён! Возвращайтесь на сайт.");
                 }
-                else // “reject”
+                else
                 {
                     dbContext.LoginRequests.Remove(loginRequest);
                     await dbContext.SaveChangesAsync();
 
-                    await bot.SendTextMessageAsync(
-                        chatId: chatId,
-                        text: "Вход отклонён."
-                    );
+                    await bot.SendTextMessageAsync(chatId, "Вход отклонён.");
                 }
             }
         }
@@ -219,4 +230,17 @@ Task HandlePollingErrorAsync(ITelegramBotClient bot, Exception exception, Cancel
         ? $"Telegram API Error:\n[{apiEx.ErrorCode}] {apiEx.Message}"
         : exception.ToString());
     return Task.CompletedTask;
+}
+
+// Метод создания ролей
+static async Task EnsureRoles(IServiceProvider services)
+{
+    var roleManager = services.GetRequiredService<RoleManager<IdentityRole>>();
+    string[] roleNames = { "Admin", "Manager", "Employee", "enAdmin" };
+
+    foreach (var roleName in roleNames)
+    {
+        if (!await roleManager.RoleExistsAsync(roleName))
+            await roleManager.CreateAsync(new IdentityRole(roleName));
+    }
 }

@@ -31,10 +31,12 @@ public class AuthenticationService(
             UserName = registerRequestDto.Email,
             EmailConfirmed = false
         };
-
+        
         var result = await userManager.CreateAsync(user, registerRequestDto.Password!);
         if (!result.Succeeded)
             throw new ArgumentException($"Невозможно зарегистрировать пользователя {registerRequestDto.Email}.");
+        
+        await userManager.AddToRoleAsync(user, "Admin");
 
         // Генерируем токен подтверждения Email
         var token = await userManager.GenerateEmailConfirmationTokenAsync(user);
@@ -56,9 +58,6 @@ public class AuthenticationService(
         };
     }
 
-    /// <summary>
-    /// Метод немедленной выдачи JWT (если Email подтверждён и 2FA (Telegram) уже настроен)
-    /// </summary>
     public async Task<AuthResponseDto> LoginImmediate(LoginRequestDto loginRequestDto)
     {
         var user = await userManager.FindByEmailAsync(loginRequestDto.Email!);
@@ -78,7 +77,7 @@ public class AuthenticationService(
         {
             new(ClaimTypes.Name, user.UserName!),
             new(ClaimTypes.Email, user.Email!),
-            new(JwtRegisteredClaimNames.Jti, Guid.NewGuid().ToString())
+            new(JwtRegisteredClaimNames.Jti, Guid.NewGuid().ToString()),
         };
 
         var roles = await userManager.GetRolesAsync(user);

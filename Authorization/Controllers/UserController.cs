@@ -85,6 +85,7 @@ namespace Authorization.Controllers
         // ---------------- Вход + 2FA через Telegram ----------------
         [AllowAnonymous]
         [HttpPost("Login")]
+        [Obsolete("Obsolete")]
         public async Task<IActionResult> Login([FromBody] LoginRequestDto request)
         {
             // 1) reCAPTCHA
@@ -180,7 +181,8 @@ namespace Authorization.Controllers
             {
                 new(ClaimTypes.Name, user.UserName!),
                 new(ClaimTypes.Email, user.Email!),
-                new(JwtRegisteredClaimNames.Jti, Guid.NewGuid().ToString())
+                new(JwtRegisteredClaimNames.Jti, Guid.NewGuid().ToString()),
+                new(ClaimTypes.NameIdentifier, user.Id),
             };
             var roles = await userManager.GetRolesAsync(user);
             authClaims.AddRange(roles.Select(r => new Claim(ClaimTypes.Role, r)));
