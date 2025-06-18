@@ -2,7 +2,9 @@ namespace Authorization.enums;
 
 public enum CompanyRole
 {
-    Employee,
-    Manager,
-    Admin
+    Employee,        
+    Manager,         
+    Assistant,       
+    Director,        
+    Admin  
 }

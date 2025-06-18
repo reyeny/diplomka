@@ -8,4 +8,6 @@ public interface ITaskService
     Task<IEnumerable<TaskDto>> ListTasksAsync(string userId, Guid companyId);
     Task ClaimTaskAsync(string userId, Guid taskId);
     Task ChangeStatusAsync(string userId, Guid taskId, ChangeTaskStatusDto dto);
+    Task UnassignTaskAsync(string userId, Guid taskId);
+    Task DeleteTaskAsync(string userId, Guid taskId);
 }

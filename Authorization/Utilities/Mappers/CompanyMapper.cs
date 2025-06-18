@@ -1,9 +1,7 @@
-// Utilities/Mappers/CompanyMapper.cs
-
 using Authorization.Dto.Company;
 using Authorization.Models;
 
-namespace Authorization.Mappers
+namespace Authorization.Utilities.Mappers
 {
     public static class CompanyMapper
     {

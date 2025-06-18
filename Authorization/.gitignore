@@ -1,0 +1,47 @@
+# 👉 ОС и IDE
+.DS_Store
+._*
+.idea/
+.vscode/
+*.sln.DotSettings.user
+
+# 👉 Rider/Visual Studio
+*.user
+*.suo
+*.userosscache
+*.sln.docstates
+*.DotSettings
+*.iml
+.vs/
+
+# 👉 C# Build folders
+bin/
+obj/
+out/
+publish/
+
+# 👉 Сборочные файлы
+*.dll
+*.pdb
+*.exe
+*.cache
+*.log
+*.tmp
+*.resources.dll
+*.nuget.*
+*.deps.json
+*.runtimeconfig.*
+*.g.*
+*.props
+*.targets
+
+# 👉 Docker/Secrets
+*.env
+.env.*
+docker-compose.override.yml
+
+# 👉 Package manager artifacts
+packages/
+*.nupkg
+project.lock.json
+project.fragment.lock.json

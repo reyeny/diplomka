@@ -1,7 +1,7 @@
 using Authorization.enums;
 using Authorization.Models;
 
-namespace Authorization.Services.TaskStateService.TaskState.State;
+namespace Authorization.Services.TaskService.TaskState.State;
 
 public class NewTaskState : TaskStateBase
 {

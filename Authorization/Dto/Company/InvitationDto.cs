@@ -12,5 +12,8 @@ public class InvitationDto
     
     public string CompanyName { get; set; }  
     public string RoleName { get; set; }         
+    public string CreatedAt { get; set; }
+
+    
     
 }

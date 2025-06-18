@@ -1,13 +1,11 @@
-// Utilities/Mappers/TaskItemMapper.cs
-
 using Authorization.Dto.Company;
 using Authorization.Models;
 
-namespace Authorization.Mappers
+namespace Authorization.Utilities.Mappers
 {
     public static class TaskItemMapper
     {
-        public static TaskItem ToDto(this TaskDto t) => new TaskItem
+        public static TaskItem ToDto(this TaskDto t) => new()
         {
             Id           = t.Id,
             CompanyId    = t.CompanyId,

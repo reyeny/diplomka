@@ -1,101 +1,129 @@
 using Authorization.Context;
 using Authorization.Dto.Company;
 using Authorization.enums;
+using Authorization.Exceptions;
 using Authorization.Models;
-using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 
-namespace Authorization.Services.InvitationService;
-
-public class InvitationService(UnchainMeDbContext db, UserManager<User> users) : IInvitationService
+namespace Authorization.Services.InvitationService
 {
-    private readonly UserManager<User> _users = users;
-
-    public async Task InviteAsync(string inviterId, Guid companyId, CreateInvitationDto dto)
+    public class InvitationService(UnchainMeDbContext db) : IInvitationService
     {
-        var invite = new Invitation
+        public async Task InviteAsync(string inviterId, Guid companyId, CreateInvitationDto dto)
         {
-            Id = Guid.NewGuid(),
-            CompanyId = companyId,
-            UserEmail = dto.UserEmail,
-            Role = dto.Role,
-            CreatedAt = DateTime.UtcNow,
-            Accepted = false,
-            RoleName = dto.Role.ToString() switch
-            {
-                "Admin" => "Администратор",
-                "Manager" => "Менеджер",
-                "Employee" => "Сотрудник",
-                _ => dto.Role.ToString()
-            }
-        };
-            
-            
-        db.Invitations.Add(invite);
-        await db.SaveChangesAsync();
-    }
+            var company = await db.Companies.FindAsync(companyId);
+            if (company is null)
+                throw new AppException("Компания не найдена");
 
-    public async Task<IEnumerable<InvitationDto>> ListForUserAsync(string userEmail)
-    {
-        // Сначала загружаем данные без вычислений
-        var invitations = await db.Invitations
-            .AsNoTracking()
-            .Where(i => i.UserEmail == userEmail && !i.Accepted)
-            .Select(i => new InvitationDto
+            var invite = new Invitation
             {
-                Id = i.Id,
-                CompanyId = i.CompanyId,
-                UserEmail = i.UserEmail,
-                Role = i.Role,
-                Accepted = i.Accepted,
-                CompanyName = i.Company.Name
-            })
-            .ToListAsync();
-
-        foreach (var invitation in invitations)
-        {
-            invitation.RoleName = invitation.Role switch
-            {
-                CompanyRole.Admin => "Администратор",
-                CompanyRole.Manager => "Менеджер",
-                CompanyRole.Employee => "Сотрудник",
-                _ => invitation.Role.ToString()
+                Id         = Guid.NewGuid(),
+                CompanyId  = companyId,
+                UserEmail  = dto.UserEmail,
+                Role       = dto.Role,
+                CreatedAt  = DateTime.UtcNow,
+                Accepted   = false,
+                RoleName   = dto.Role.ToString() switch
+                {
+                    nameof(CompanyRole.Admin)    => "Администратор",
+                    nameof(CompanyRole.Manager)  => "Менеджер",
+                    nameof(CompanyRole.Employee) => "Сотрудник",
+                    _                            => dto.Role.ToString()
+                }
             };
+
+            db.Invitations.Add(invite);
+            await db.SaveChangesAsync();
         }
 
-        return invitations;
-    }
-
-
-    public async Task AcceptAsync(string userId, Guid invitationId)
-    {
-        var inv = await db.Invitations.FirstOrDefaultAsync(i => i.Id == invitationId);
-        if (inv == null)
-            throw new ArgumentException("Invitation not found");
-        inv.Accepted = true;
-
-        db.CompanyUsers.Add(new CompanyUser
+        public async Task<IEnumerable<InvitationDto>> ListForUserAsync(string userEmail)
         {
-            CompanyId = inv.CompanyId,
-            UserId = userId,
-            Role = inv.Role,
-            InvitedAt = inv.CreatedAt,
-            AcceptedAt = DateTime.UtcNow
-        });
+            var list = await db.Invitations
+                .AsNoTracking()
+                .Include(i => i.Company)
+                .Where(i => i.UserEmail == userEmail && !i.Accepted)
+                .Select(i => new InvitationDto
+                {
+                    Id          = i.Id,
+                    CompanyId   = i.CompanyId,
+                    UserEmail   = i.UserEmail,
+                    Role        = i.Role,
+                    Accepted    = i.Accepted,
+                    CompanyName = i.Company.Name,
+                    RoleName    = i.RoleName
+                })
+                .ToListAsync();
 
-        await db.SaveChangesAsync();
+            return list;
+        }
+
+        public async Task AcceptAsync(string userId, Guid invitationId)
+        {
+            var inv = await db.Invitations.FirstOrDefaultAsync(i => i.Id == invitationId);
+            if (inv is null)
+                throw new AppException("Приглашение не найдено");
+
+            if (inv.Accepted)
+                throw new AppException("Приглашение уже принято");
+
+            inv.Accepted = true;
+            db.CompanyUsers.Add(new CompanyUser
+            {
+                CompanyId  = inv.CompanyId,
+                UserId     = userId,
+                Role       = inv.Role,
+                InvitedAt  = inv.CreatedAt,
+                AcceptedAt = DateTime.UtcNow
+            });
+
+            await db.SaveChangesAsync();
+        }
+
+        public async Task<IEnumerable<InvitationDto>> ListForCompanyAsync(Guid companyId)
+        {
+            var list = await db.Invitations
+                .AsNoTracking()
+                .Include(i => i.Company)
+                .Where(i => i.CompanyId == companyId)
+                .Where(i => i.Accepted == false)
+                .Select(i => new InvitationDto
+                {
+                    Id          = i.Id,
+                    CompanyId   = i.CompanyId,
+                    UserEmail   = i.UserEmail,
+                    Role        = i.Role,
+                    Accepted    = i.Accepted,
+                    CompanyName = i.Company.Name,
+                    RoleName    = i.RoleName,
+                    CreatedAt = i.CreatedAt.ToString("yyyy-MM-dd"),
+                })
+                .ToListAsync();
+
+            return list;
+        }
+
+        public async Task CancelAsync(string inviterId, Guid invitationId)
+        {
+            var inv = await db.Invitations.FindAsync(invitationId);
+            if (inv is null)
+                throw new AppException("Приглашение не найдено");
+
+            if (inv.Accepted)
+                throw new AppException("Нельзя отменить уже принятое приглашение");
+
+            db.Invitations.Remove(inv);
+            await db.SaveChangesAsync();
+        }
+
+        public async Task<CompanyRole> GetUserRoleInCompanyAsync(string userId, Guid companyId)
+        {
+            var cu = await db.CompanyUsers
+                              .AsNoTracking()
+                              .FirstOrDefaultAsync(x => x.UserId == userId && x.CompanyId == companyId);
+            if (cu is null)
+                throw new AppException("Роль пользователя в компании не найдена");
+
+            return cu.Role;
+        }
     }
-        
-    public async Task<CompanyRole> GetUserRoleInCompanyAsync(string userId, Guid companyId)
-    {
-        var companyUser = await db.CompanyUsers
-            .AsNoTracking()
-            .FirstOrDefaultAsync(cu => cu.UserId == userId && cu.CompanyId == companyId);
-
-        if (companyUser == null)
-            throw new UnauthorizedAccessException("Пользователь не состоит в этой компании");
-
-        return companyUser.Role;
-    }
-
 }

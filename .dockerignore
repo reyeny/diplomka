@@ -1,0 +1,68 @@
+﻿**/.dockerignore
+**/.env
+**/.git
+**/.gitignore
+**/.project
+**/.settings
+**/.toolstarget
+**/.vs
+**/.vscode
+**/.idea
+**/*.*proj.user
+**/*.dbmdl
+**/*.jfm
+**/azds.yaml
+**/bin
+**/charts
+**/docker-compose*
+**/Dockerfile*
+**/node_modules
+**/npm-debug.log
+**/obj
+**/secrets.dev.yaml
+**/values.dev.yaml
+LICENSE
+README.md
+
+# .NET build folders
+bin/
+obj/
+out/
+
+# Rider и VS
+.idea/
+.vscode/
+*.suo
+*.user
+*.userosscache
+*.sln.docstates
+
+# macOS system files
+.DS_Store
+.AppleDouble
+.LSOverride
+Icon?
+._*
+
+# Logs
+*.log
+
+# Git
+.git
+.gitignore
+
+# Docker files (чтобы не попадали лишние образы)
+Dockerfile*
+docker-compose*
+
+# Secrets
+.env
+*.env
+secrets.json
+
+# NuGet packages (если не нужно тащить кэш)
+*.nupkg
+packages/
+
+# Local tools
+.vs/

@@ -1,7 +1,6 @@
 using Authorization.enums;
-using Authorization.Services.TaskStateService.TaskState.State;
-
-namespace Authorization.Services.TaskStateService.TaskState;
+using Authorization.Services.TaskService.TaskState.State;
+namespace Authorization.Services.TaskService.TaskState;
 
 public static class TaskStateFactory
 {

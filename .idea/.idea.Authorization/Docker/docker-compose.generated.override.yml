@@ -1,0 +1,19 @@
+# This is a generated file. Not intended for manual editing.
+services:
+  authorization:
+    build:
+      context: "/Users/reyeny/Local/identity Main/backend/Authorization"
+      dockerfile: "Dockerfile"
+      target: "build"
+    command: []
+    entrypoint:
+    - "dotnet"
+    - "/app/bin/Debug/net8.0/Authorization.dll"
+    environment: {}
+    image: "authorization:dev"
+    ports: []
+    volumes:
+    - "/Users/reyeny/Local/identity Main/backend/Authorization:/app:rw"
+    - "/Users/reyeny/Local/identity Main/backend:/src:rw"
+    - "/Users/reyeny/.nuget/packages:/root/.nuget/packages"
+    working_dir: "/app"
