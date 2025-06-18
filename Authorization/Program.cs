@@ -137,12 +137,14 @@ var app = builder.Build();
 using (var scope = app.Services.CreateScope())
 {
     var services = scope.ServiceProvider;
+    
+    var dbContext = scope.ServiceProvider.GetRequiredService<UnchainMeDbContext>();
 
-    var dbContext = services.GetRequiredService<UnchainMeDbContext>();
+
     dbContext.Database.Migrate(); 
 
     await EnsureRoles(services);
-    await EnsureRolesAndUsersAsync(services);
+    //await EnsureRolesAndUsersAsync(services);
 }
 
 if (app.Environment.IsDevelopment())
